@@ -35,36 +35,42 @@ public class JwtFilter extends OncePerRequestFilter {
                                      @NonNull HttpServletResponse response,
                                      @NonNull FilterChain filterChain)
             throws ServletException, IOException {
-        String header= request.getHeader("Authorization");
-        if(header==null || !header.startsWith("Bearer ")){
-            filterChain.doFilter(request, response);
-            return;
-        }
-        String token=header.substring(7);
-        String userName=jwtService.getUserClaims(token);
-        if(userName !=null && SecurityContextHolder.getContext().getAuthentication()==null){
-            UserDetails userDetails=userDetailsService.loadUserByUsername(userName);
-            // to-do add authorities when needed
+        try {
+            String header = request.getHeader("Authorization");
+            if (header == null || !header.startsWith("Bearer ")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+            String token = header.substring(7);
+            String userName = jwtService.getUserClaims(token);
+            if (userName != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(userName);
+                // to-do add authorities when needed
 //            if(!userDetails.isEnabled()){
 //                throw new UserNotVerfiedException("user not verfied execption");
 //            }
-            Query query=new Query(Criteria.where("userName").is(userDetails.getUsername()).and("logOut").is(true));
-            Users users=mongoTemplate.findOne(query, Users.class);
-            if(users!=null)throw new UserTokenIsInvalidException("user should login");
-            if(jwtService.isTokenExpired(token)){
-                throw new UserTokenIsInvalidException("user token expired create a new token using verificatiom");
+                Query query = new Query(Criteria.where("userName").is(userDetails.getUsername()).and("logOut").is(true));
+                Users users = mongoTemplate.findOne(query, Users.class);
+                if (users != null) throw new UserTokenIsInvalidException("user should login");
+                if (jwtService.isTokenExpired(token)) {
+                    throw new UserTokenIsInvalidException("user token expired create a new token using verificatiom");
+                }
+                if (!jwtService.isTokenValid(token, userDetails)) {
+                    throw new UserTokenIsInvalidException("user token is invalid");
+                }
+                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                usernamePasswordAuthenticationToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
+                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
             }
-            if(!jwtService.isTokenValid(token, userDetails)){
-                throw new UserTokenIsInvalidException("user token is invalid");
-            }
-            UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken=
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            usernamePasswordAuthenticationToken.setDetails(
-                    new WebAuthenticationDetailsSource().buildDetails(request)
-            );
-            SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+            filterChain.doFilter(request, response);
         }
-        filterChain.doFilter(request, response);
+        catch (Exception e){
+            logger.info(e.getLocalizedMessage());
+            response.sendRedirect("http://127.0.0.1:5500/index.html");
+        }
     }
 
     //don't do filter

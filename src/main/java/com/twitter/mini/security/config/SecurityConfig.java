@@ -17,11 +17,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -50,10 +45,17 @@ public class SecurityConfig {
         httpSecurity
                 .authenticationProvider(authenticationProvider());
 
+//        httpSecurity.exceptionHandling(execption->execption.authenticationEntryPoint((request, response, authException) -> {
+//            response.sendRedirect("http://127.0.0.1:5500/index.html");
+//        }));
+
         //jwt filter
 
         httpSecurity.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
+        httpSecurity.formLogin(login->login.
+                loginPage("http://127.0.0.1:5500/index.html").
+                permitAll());
 
         //cors orgin
 //        httpSecurity
