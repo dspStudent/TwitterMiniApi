@@ -1,4 +1,13 @@
-FROM ubuntu:latest
-LABEL authors="dsp"
+FROM gradle:jdk21
 
-ENTRYPOINT ["top", "-b"]
+WORKDIR /app
+
+COPY . /app
+
+RUN chmod +x gradlew
+
+RUN ./gradlew clean build
+
+EXPOSE 8080
+
+CMD ["java", "-jar", "build/libs/mini-0.0.1-SNAPSHOT.jar"]
